@@ -22,11 +22,12 @@ export default function Claim({
   transactor,
   web3Modal,
 }) {
+  console.log("claim!");
   const [validateStatus, setValidateStatus] = useState("");
   const [articleQueryResponse, setArticleQueryResponse] = useState("");
   const [currentPageId, setCurrentPageId] = useState(BigNumber.from(0));
   const [isClaiming, setIsClaiming] = useState(false);
-  const isClaimed = useContractReader(contracts, "Token", "isClaimed", [currentPageId]);
+  const isClaimed = useContractReader(contracts, "Token", "isClaimed", [currentPageId], 100000);
   let cancelRequest;
 
   useEffect(() => {

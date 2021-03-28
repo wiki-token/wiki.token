@@ -1,47 +1,79 @@
-import React from "react";
+import React, { useEffect } from "react";
 
-import { Divider } from "antd";
+import axios from "axios";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Divider, Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 
 import { Token } from "../components";
 
-export default function Tokens({
-  address,
-  contracts,
-  headerText,
-  localProvider,
-  signer,
-  tokens,
-  transactor,
-  walletNotConnectedText,
-  web3Modal,
-}) {
-  return (
-    <div className="menu-view">
-      <div>{headerText}</div>
-      <div hidden={web3Modal && web3Modal.cachedProvider}>
-        <Divider />
-        {walletNotConnectedText.concat(" ")}
-        <span role="img" aria-label="rocket">
-          🚀
-        </span>
+const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
+
+/**
+ * Displays a grid of Wiki Tokens, either that solely belong to the user's address,
+ * or owned by any address.
+ */
+export default class Tokens extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tokens: [],
+      isLoading: true,
+    };
+  }
+
+  componentDidMount() {
+    // this.props.contracts["Token"]
+    //   .queryFilter(this.props.contracts["Token"].filters.Mint(this.props.address))
+    //   .then(tokens => {
+    //     Promise.all(
+    //       tokens.map(token => {
+    //         const id = BigNumber.from(token["data"]).toNumber(token);
+    //         console.log("tokensEventId", id);
+    //         return axios
+    //           .get(`${process.env.REACT_APP_METADATA_API_BASE_URL}/api/token/${id}`)
+    //           .then(res => res.data);
+    //       }),
+    //     ).then(tokens => {
+    //       this.setState({ tokens: tokens, isLoading: false });
+    //     });
+    //   });
+  }
+
+  render() {
+    return (
+      <div className="menu-view">
+        {/* <Spin indicator={antIcon} hidden={this.state.isLoading === false} />
+        {!this.state.isLoading && (
+          <div>
+            <div>{this.props?.headerText}</div>
+            <div hidden={this.props?.web3Modal && this.props?.web3Modal.cachedProvider}>
+              <Divider />
+              {this.props?.walletNotConnectedText.concat(" ")}
+              <span role="img" aria-label="rocket">
+                🚀
+              </span>
+            </div>
+            <div hidden={!this.state.tokens || this.state.tokens.length === 0}>
+              {this.state.tokens.map(token => {
+                return (
+                  <Token
+                    transactor={this.props?.transactor}
+                    signer={this.props?.signer}
+                    address={this.props?.address}
+                    contracts={this.props?.contracts}
+                    localProvider={this.props?.localProvider}
+                    key={token.properties?.name?.description}
+                    imageUrl={token.properties?.image?.description}
+                    pageTitle={token.properties?.description?.description}
+                    pageId={token.properties?.name?.description}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )} */}
       </div>
-      <div hidden={!tokens || tokens.length === 0}>
-        {tokens.map(token => {
-          return (
-            <Token
-              transactor={transactor}
-              signer={signer}
-              address={address}
-              contracts={contracts}
-              key={token.properties?.name?.description}
-              imageUrl={token.properties?.image?.description}
-              pageTitle={token.properties?.description?.description}
-              pageId={token.properties?.name?.description}
-              localProvider={localProvider}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
+    );
+  }
 }

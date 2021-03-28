@@ -26,6 +26,8 @@ const KEY_VIEW_TX_HISTORY = "5";
 const KEY_ACCEPT_BID = "6";
 const KEY_WITHDRAW_BID = "7";
 
+const TOKEN_POLL_TIME = 3000;
+
 // TODO(bingbongle) validation, loading spinner, etc.s
 // TODO(bingbongle) donation amount
 export default function Token({
@@ -55,8 +57,8 @@ export default function Token({
   // Tx History events
   const [txHistoryEvents, setTxHistoryEvents] = useState([]);
 
-  // Poll the owner of this token.
-  const owner = useContractReader(contracts, "Token", "pageIdToAddress", [pageId]);
+  // // Poll the owner of this token.
+  const owner = useContractReader(contracts, "Token", "pageIdToAddress", [pageId], TOKEN_POLL_TIME);
 
   // Poll offer belonging to this token.
   const offer = useContractReader(
@@ -64,7 +66,7 @@ export default function Token({
     "Token",
     "pagesOfferedForSale",
     [pageId],
-    10000,
+    TOKEN_POLL_TIME,
     newOffer => {
       return {
         isForSale: newOffer[0],
@@ -75,24 +77,39 @@ export default function Token({
   );
 
   // Poll outstanding bid belonging to this token.
-  const bid = useContractReader(contracts, "Token", "pageBids", [pageId], 10000, newBid => {
-    return newBid
-      ? {
-          bidder: newBid.bidder,
-          hasBid: newBid.hasBid,
-          value: web3.utils.fromWei(newBid.value.toString(), "ether"),
-        }
-      : undefined;
-  });
+  const bid = useContractReader(
+    contracts,
+    "Token",
+    "pageBids",
+    [pageId],
+    TOKEN_POLL_TIME,
+    newBid => {
+      return newBid
+        ? {
+            bidder: newBid.bidder,
+            hasBid: newBid.hasBid,
+            value: web3.utils.fromWei(newBid.value.toString(), "ether"),
+          }
+        : undefined;
+    },
+  );
 
   // Poll donation amount required for this token
-  const offerDonationAmount = useContractReader(contracts, "Token", "calculateDonationFromValue", [
-    web3.utils.toWei(offer && offer.price ? offer.price.toString() : "0", "ether"),
-  ]);
+  const offerDonationAmount = useContractReader(
+    contracts,
+    "Token",
+    "calculateDonationFromValue",
+    [web3.utils.toWei(offer && offer.price ? offer.price.toString() : "0", "ether")],
+    TOKEN_POLL_TIME,
+  );
 
-  const bidDonationAmountWei = useContractReader(contracts, "Token", "calculateDonationFromValue", [
-    web3.utils.toWei(bid && bid.value ? bid.value.toString() : "0", "ether"),
-  ]);
+  const bidDonationAmountWei = useContractReader(
+    contracts,
+    "Token",
+    "calculateDonationFromValue",
+    [web3.utils.toWei(bid && bid.value ? bid.value.toString() : "0", "ether")],
+    TOKEN_POLL_TIME,
+  );
 
   // Creates a Menu.Item for token action menu.
   const menuItem = (key, emoji, emojiText, label) => {
@@ -264,8 +281,7 @@ export default function Token({
   }
 
   // Asynchronously fetch and sort transaction history associated with this token.
-  fetchAndSortTxHistoryEvents();
-
+  // fetchAndSortTxHistoryEvents();
   return (
     <Dropdown overlay={menu()} trigger={["contextMenu"]}>
       <div className="token">

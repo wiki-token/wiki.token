@@ -19,7 +19,6 @@ import {
   useGasPrice,
   useUserProvider,
   useContractLoader,
-  useTokensProvider,
 } from "./hooks";
 import { Layout } from "./components";
 import { NETWORKS } from "./constants";
@@ -67,9 +66,10 @@ const localProviderUrlFromEnv =
 const localProvider = new JsonRpcProvider(localProviderUrlFromEnv);
 
 function App() {
+  console.log("teddytest");
   const [injectedProvider, setInjectedProvider] = useState();
 
-  const price = useExchangePrice(targetNetwork, mainnetProvider);
+  const price = useExchangePrice(targetNetwork, mainnetProvider, 30000);
   const gasPrice = useGasPrice(targetNetwork, "fast");
 
   const userProvider = useUserProvider(injectedProvider, localProvider);
@@ -94,57 +94,18 @@ function App() {
     setRoute(window.location.pathname);
   }, [setRoute]);
 
-  // TODO(teddywilson) mess begins
+  // const totalSupply = useContractReader(
+  //   contracts,
+  //   "Token",
+  //   "totalSupply",
+  //   [],
+  //   30000,
+  //   newTotalSupply => {
+  //     return newTotalSupply ? BigNumber.from(newTotalSupply).toNumber() : 0;
+  //   },
+  // );
 
-  // Shared function to format token result
-  const formatTokensResult = result => {
-    if (!result || result.length !== 3) {
-      return [];
-    }
-    // Ridiculous hack for array equality
-    return JSON.stringify(
-      result[0].map(token => {
-        return BigNumber.from(token).toNumber();
-      }),
-    );
-  };
-
-  // Fetch my tokens
-  // TODO(bingbongle) If bid is accepted, tokens still show up here.
-  const myTokensResult = useContractReader(
-    contracts,
-    "Token",
-    "tokensOf",
-    [address, 0, 100000, true],
-    2000,
-    formatTokensResult,
-  );
-  const myTokens = useTokensProvider(myTokensResult);
-
-  // Fetch discovery tokens
-  const discoveryTokensResult = useContractReader(
-    contracts,
-    "Token",
-    "discover",
-    [0, 10000, true],
-    2000,
-    formatTokensResult,
-  );
-  const discoveryTokens = useTokensProvider(discoveryTokensResult);
-
-  const totalSupply = useContractReader(
-    contracts,
-    "Token",
-    "totalSupply",
-    [],
-    10000,
-    newTotalSupply => {
-      return newTotalSupply ? BigNumber.from(newTotalSupply).toNumber() : 0;
-    },
-  );
-
-  // TODO(teddywilson) mess ends
-
+  const totalSupply = 1;
   return (
     <div className="App">
       <Alert
@@ -159,100 +120,104 @@ function App() {
         provider={userProvider}
         price={price}
       >
-        <BrowserRouter>
-          <Menu style={{ marginBottom: 24 }} selectedKeys={[route]} mode="horizontal">
-            <Menu.Item key="/claim" icon={<SearchOutlined />}>
-              <Link
-                onClick={() => {
-                  setRoute("/claim");
-                }}
-                to="/claim"
-              >
-                Claim
-              </Link>
-            </Menu.Item>
-            <Menu.Item key="/tokens" icon={<TrophyOutlined />}>
-              <Link
-                onClick={() => {
-                  setRoute("/tokens");
-                }}
-                to="/tokens"
-              >
-                My Tokens
-              </Link>
-            </Menu.Item>
-            <Menu.Item key="/discover" icon={<GlobalOutlined />}>
-              <Link
-                onClick={() => {
-                  setRoute("/discover");
-                }}
-                to="/discover"
-              >
-                Discover
-              </Link>
-            </Menu.Item>
-            <Menu.Item key="/about" icon={<QuestionCircleOutlined />}>
-              <Link
-                onClick={() => {
-                  setRoute("/about");
-                }}
-                to="/about"
-              />
-              About
-            </Menu.Item>
-          </Menu>
-          <Switch>
-            <Route exact path={["/about", "/"]}>
-              <About totalSupply={totalSupply} />
-            </Route>
-            <Route exact path="/claim">
-              <Claim
-                address={address}
-                contracts={contracts}
-                localProvider={localProvider}
-                signer={userProvider.getSigner()}
-                transactor={transactor}
-                web3Modal={web3Modal}
-              />
-            </Route>
-            <Route path="/tokens">
-              <Tokens
-                price={price}
-                address={address}
-                tokens={myTokens}
-                web3Modal={web3Modal}
-                contracts={contracts}
-                transactor={transactor}
-                signer={userProvider.getSigner()}
-                headerText={
-                  myTokens && myTokens.length > 0
-                    ? `Right click on a token to accept a bid, or to list it for sale 📈`
-                    : `You haven't claimed any tokens... yet 😞`
-                }
-                walletNotConnectedText="Connect a wallet to claim your first one"
-                localProvider={localProvider}
-              />
-            </Route>
-            <Route path="/discover">
-              <Tokens
-                price={price}
-                address={address}
-                tokens={discoveryTokens}
-                web3Modal={web3Modal}
-                contracts={contracts}
-                transactor={transactor}
-                signer={userProvider.getSigner()}
-                headerText={
-                  discoveryTokens && discoveryTokens.length > 0
-                    ? `Right click on a token to purchase it for full price, or to place a bid 🏦`
-                    : `No tokens have been claimed... yet 😞`
-                }
-                walletNotConnectedText="Connect a wallet to claim the first one"
-                localProvider={localProvider}
-              />
-            </Route>
-          </Switch>
-        </BrowserRouter>
+        {contracts && (
+          <BrowserRouter>
+            <Menu style={{ marginBottom: 24 }} selectedKeys={[route]} mode="horizontal">
+              {/* <Menu.Item key="/claim" icon={<SearchOutlined />}>
+                <Link
+                  onClick={() => {
+                    setRoute("/claim");
+                  }}
+                  to="/claim"
+                >
+                  Claim
+                </Link>
+              </Menu.Item>
+              <Menu.Item key="/tokens" icon={<TrophyOutlined />}>
+                <Link
+                  onClick={() => {
+                    setRoute("/tokens");
+                  }}
+                  to="/tokens"
+                >
+                  My Tokens
+                </Link>
+              </Menu.Item>
+              <Menu.Item key="/discover" icon={<GlobalOutlined />}>
+                <Link
+                  onClick={() => {
+                    setRoute("/discover");
+                  }}
+                  to="/discover"
+                >
+                  Discover
+                </Link>
+              </Menu.Item>
+              <Menu.Item key="/about" icon={<QuestionCircleOutlined />}>
+                <Link
+                  onClick={() => {
+                    setRoute("/about");
+                  }}
+                  to="/about"
+                />
+                About
+              </Menu.Item> */}
+            </Menu>
+            <Switch>
+              <Route exact path={["/about", "/"]}>
+                <About totalSupply={totalSupply} />
+              </Route>
+              <Route exact path="/claim">
+                <Claim
+                  address={address}
+                  contracts={contracts}
+                  localProvider={localProvider}
+                  signer={userProvider.getSigner()}
+                  transactor={transactor}
+                  web3Modal={web3Modal}
+                />
+              </Route>
+              {/* <Route path="/tokens">
+                <Tokens
+                  price={price}
+                  address={address}
+                  onlyMyTokens={true}
+                  web3Modal={web3Modal}
+                  contracts={contracts}
+                  transactor={transactor}
+                  signer={userProvider.getSigner()}
+                  // headerText={
+                  //   myTokens && myTokens.length > 0
+                  //     ? `Right click on a token to accept a bid, or to list it for sale 📈`
+                  //     : `You haven't claimed any tokens... yet 😞`
+                  // }
+                  headerText={`TODO`}
+                  walletNotConnectedText="Connect a wallet to claim your first one"
+                  localProvider={localProvider}
+                />
+              </Route>
+              <Route path="/discover">
+                <Tokens
+                  price={price}
+                  address={address}
+                  onlyMyTokens={false}
+                  web3Modal={web3Modal}
+                  contracts={contracts}
+                  transactor={transactor}
+                  signer={userProvider.getSigner()}
+                  // headerText={
+                  //   discoveryTokens && discoveryTokens.length > 0
+                  //     ? `Right click on a token to purchase it for full price, or to place a bid 🏦`
+                  //     : `No tokens have been claimed... yet 😞`
+                  // }
+                  headerText={`TODO`}
+                  walletNotConnectedText="Connect a wallet to claim the first one"
+                  localProvider={localProvider}
+                />
+              </Route> */}
+            </Switch>
+          </BrowserRouter>
+        )}
       </Layout>
     </div>
   );
