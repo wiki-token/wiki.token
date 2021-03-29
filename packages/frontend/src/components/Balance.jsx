@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { formatEther } from "@ethersproject/units";
 import { usePoller } from "eth-hooks";
 
-const POLL_BALANCE_MS = 2000;
+const POLL_BALANCE_MS = 30000;
 
 export default function Balance({ address, provider, price }) {
   const [dollarMode, setDollarMode] = useState(true);
@@ -35,6 +35,7 @@ export default function Balance({ address, provider, price }) {
     displayBalance = "$" + (floatBalance * price).toFixed(2);
   }
 
+  console.log("balance");
   return (
     <span
       className="balance"

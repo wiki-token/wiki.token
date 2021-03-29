@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Alert, Image, Menu, Dropdown } from "antd";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -13,7 +13,7 @@ import {
   WithdrawBidModal,
 } from "./modals";
 import { FormatAddress } from "../helpers";
-import { useContractReader, useEventListener } from "../hooks";
+import { useContractReader, useEventListener, usePoller } from "../hooks";
 import { NULL_ADDRESS } from "../constants";
 
 import web3 from "web3";
@@ -55,44 +55,44 @@ export default function Token({
   // Tx History events
   const [txHistoryEvents, setTxHistoryEvents] = useState([]);
 
-  // Poll the owner of this token.
-  const owner = useContractReader(contracts, "Token", "pageIdToAddress", [pageId]);
+  const [token, setToken] = useState();
 
-  // Poll offer belonging to this token.
-  const offer = useContractReader(
-    contracts,
-    "Token",
-    "pagesOfferedForSale",
-    [pageId],
-    10000,
-    newOffer => {
-      return {
-        isForSale: newOffer[0],
-        price: web3.utils.fromWei(newOffer.minValue.toString(), "ether"),
-        seller: newOffer[2],
-      };
-    },
-  );
+  const getTokenInfo = async () => {
+    if (!contracts) {
+      return;
+    }
+    const owner = await contracts["Token"]["pageIdToAddress"](pageId);
+    const offer = await contracts["Token"]["pagesOfferedForSale"](pageId);
+    const bid = await contracts["Token"]["pageBids"](pageId);
+    const offerDonationAmount = await contracts["Token"]["calculateDonationFromValue"](
+      web3.utils.toWei(offer && offer.price ? offer.price.toString() : "0", "ether"),
+    );
+    const bidDonationAmountWei = await contracts["Token"]["calculateDonationFromValue"](
+      web3.utils.toWei(bid && bid.value ? bid.value.toString() : "0", "ether"),
+    );
+    const token = {
+      owner: owner,
+      offer: {
+        isForSale: offer[0],
+        price: web3.utils.fromWei(offer.minValue.toString(), "ether"),
+        seller: offer[2],
+      },
+      bid: bid
+        ? {
+            bidder: bid.bidder,
+            hasBid: bid.hasBid,
+            value: web3.utils.fromWei(bid.value.toString(), "ether"),
+          }
+        : undefined,
+    };
+    setToken(token);
+  };
 
-  // Poll outstanding bid belonging to this token.
-  const bid = useContractReader(contracts, "Token", "pageBids", [pageId], 10000, newBid => {
-    return newBid
-      ? {
-          bidder: newBid.bidder,
-          hasBid: newBid.hasBid,
-          value: web3.utils.fromWei(newBid.value.toString(), "ether"),
-        }
-      : undefined;
-  });
-
-  // Poll donation amount required for this token
-  const offerDonationAmount = useContractReader(contracts, "Token", "calculateDonationFromValue", [
-    web3.utils.toWei(offer && offer.price ? offer.price.toString() : "0", "ether"),
-  ]);
-
-  const bidDonationAmountWei = useContractReader(contracts, "Token", "calculateDonationFromValue", [
-    web3.utils.toWei(bid && bid.value ? bid.value.toString() : "0", "ether"),
-  ]);
+  useEffect(() => {
+    if (!token) {
+      getTokenInfo();
+    }
+  }, []);
 
   // Creates a Menu.Item for token action menu.
   const menuItem = (key, emoji, emojiText, label) => {
@@ -109,25 +109,25 @@ export default function Token({
   // Builds the right-click menu with user options to interact with token. Varies depending on user
   // and token state.
   const menu = () => {
-    if (!offer || !owner || !address || !bid) {
+    if (!token) {
       return <Menu />;
     }
     let items = [];
-    if (owner === address) {
-      if (offer.isForSale) {
+    if (token.owner === address) {
+      if (token.offer.isForSale) {
         items.push(menuItem(KEY_UNLIST_FROM_MARKETPLACE, "🛌", "bed", "Unlist from marketplace"));
       } else {
         items.push(menuItem(KEY_LIST_FOR_SALE, "🎉", "party", "List for sale"));
       }
-      if (bid.hasBid) {
+      if (token.bid.hasBid) {
         items.push(menuItem(KEY_ACCEPT_BID, "❤️", "love", "Accept bid"));
       }
     } else {
-      if (offer.isForSale) {
+      if (token.offer.isForSale) {
         items.push(menuItem(KEY_PURCHASE_FULL_PRICE, "🔥", "fire", "Purchase for full price"));
       }
-      if (owner !== NULL_ADDRESS) {
-        if (bid.hasBid && bid.bidder === address) {
+      if (token.owner !== NULL_ADDRESS) {
+        if (token.bid.hasBid && token.bid.bidder === address) {
           items.push(menuItem(KEY_WITHDRAW_BID, "🥺", "pleading-face", "Withdraw bid"));
         } else {
           items.push(menuItem(KEY_PLACE_BID, "🤠", "cowboy", "Bid on page"));
@@ -175,7 +175,7 @@ export default function Token({
     await transactor(
       contracts["Token"]
         .connect(signer)
-        ["acceptBidForPage"](pageId, web3.utils.toWei(bid.value, "ether")),
+        ["acceptBidForPage"](pageId, web3.utils.toWei(token.bid.value, "ether")),
     );
   };
 
@@ -205,8 +205,8 @@ export default function Token({
       contracts["Token"].connect(signer)["buyPage"](pageId, {
         // TODO(bingbongle): this doesn't work
         value: web3.utils
-          .toBN(web3.utils.toWei(offer.price, "ether"))
-          .add(web3.utils.toBN(offerDonationAmount.toString()))
+          .toBN(web3.utils.toWei(token.offer.price, "ether"))
+          .add(web3.utils.toBN(token.offerDonationAmount.toString()))
           .toString(),
       }),
     );
@@ -264,16 +264,16 @@ export default function Token({
   }
 
   // Asynchronously fetch and sort transaction history associated with this token.
-  fetchAndSortTxHistoryEvents();
+  //fetchAndSortTxHistoryEvents();
 
   return (
     <Dropdown overlay={menu()} trigger={["contextMenu"]}>
       <div className="token">
-        {offer && offer.isForSale && (
-          <Alert message={"💸  " + offer.price + " ETH"} type={"success"} />
+        {token && token.offer && token.offer.isForSale && (
+          <Alert message={"💸  " + token.offer.price + " ETH"} type={"success"} />
         )}
-        {bid && bid.hasBid && (
-          <Alert message={"Open bid for " + bid.value + " ETH"} type="success" />
+        {token && token.bid && token.bid.hasBid && (
+          <Alert message={"Open bid for " + token.bid.value + " ETH"} type="success" />
         )}
         <div className="token-wrapper">
           <div className="token-image">
@@ -291,17 +291,17 @@ export default function Token({
             <div className="token-page-id">{pageId}</div>
           </div>
         </div>
-        {owner && address && owner !== NULL_ADDRESS && (
+        {token && token.owner && address && token.owner !== NULL_ADDRESS && (
           <div className="token-owner">
-            {owner === address ? `😎 You own this token` : FormatAddress(owner)}
+            {token.owner === address ? `😎 You own this token` : FormatAddress(token.owner)}
           </div>
         )}
         {/* Token action modals */}
         {/* This should be wrapped in some isModalReady property, probably */}
-        {bid && bidDonationAmountWei && offerDonationAmount && offer && (
+        {/* {tokenData && (
           <div>
             <AcceptBidModal
-              value={bid.value}
+              value={tokenData.bid.value}
               donationAmountWei={bidDonationAmountWei}
               pageTitle={pageTitle}
               visible={acceptBidModalVisible}
@@ -390,7 +390,7 @@ export default function Token({
               }}
             />
           </div>
-        )}
+        )} */}
       </div>
     </Dropdown>
   );

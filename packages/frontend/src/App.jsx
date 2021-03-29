@@ -116,7 +116,7 @@ function App() {
     "Token",
     "tokensOf",
     [address, 0, 100000, true],
-    2000,
+    10000,
     formatTokensResult,
   );
   const myTokens = useTokensProvider(myTokensResult);
@@ -127,7 +127,7 @@ function App() {
     "Token",
     "discover",
     [0, 10000, true],
-    2000,
+    10000,
     formatTokensResult,
   );
   const discoveryTokens = useTokensProvider(discoveryTokensResult);
