@@ -66,7 +66,6 @@ const localProviderUrlFromEnv =
 const localProvider = new JsonRpcProvider(localProviderUrlFromEnv);
 
 function App() {
-  console.log("teddytest");
   const [injectedProvider, setInjectedProvider] = useState();
 
   const price = useExchangePrice(targetNetwork, mainnetProvider, 30000);
@@ -120,10 +119,10 @@ function App() {
         provider={userProvider}
         price={price}
       >
-        {contracts && (
+        {contracts && address && localProvider && userProvider && (
           <BrowserRouter>
             <Menu style={{ marginBottom: 24 }} selectedKeys={[route]} mode="horizontal">
-              {/* <Menu.Item key="/claim" icon={<SearchOutlined />}>
+              <Menu.Item key="/claim" icon={<SearchOutlined />}>
                 <Link
                   onClick={() => {
                     setRoute("/claim");
@@ -161,7 +160,7 @@ function App() {
                   to="/about"
                 />
                 About
-              </Menu.Item> */}
+              </Menu.Item>
             </Menu>
             <Switch>
               <Route exact path={["/about", "/"]}>
@@ -177,7 +176,7 @@ function App() {
                   web3Modal={web3Modal}
                 />
               </Route>
-              {/* <Route path="/tokens">
+              <Route path="/tokens">
                 <Tokens
                   price={price}
                   address={address}
@@ -214,7 +213,7 @@ function App() {
                   walletNotConnectedText="Connect a wallet to claim the first one"
                   localProvider={localProvider}
                 />
-              </Route> */}
+              </Route>
             </Switch>
           </BrowserRouter>
         )}

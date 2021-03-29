@@ -76,7 +76,7 @@ contract Token is ERC721, Ownable {
     /// Events ///
     //////////////
     
-    event Mint(address indexed to, uint indexed pageId);
+    event Mint(address indexed to, uint pageId);
     event PageOffered(uint indexed pageId, uint minValue);
     event PageBidEntered(uint indexed pageId, uint value, address indexed fromAddress);
     event PageBidWithdrawn(uint indexed pageId, uint value, address indexed fromAddress);

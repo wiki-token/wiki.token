@@ -22,28 +22,34 @@ export default class Tokens extends React.Component {
     };
   }
 
+  fetchTokens = async () => {
+    console.log("yongo");
+    this.props.contracts["Token"]
+      .queryFilter(this.props.contracts["Token"].filters.Mint(this.props.address), 0, "latest")
+      .then(tokens => {
+        console.log("snoopy: ", tokens);
+        Promise.all(
+          tokens.map(token => {
+            const id = BigNumber.from(token["data"]).toNumber(token);
+            console.log("tokensEventId", id);
+            return axios
+              .get(`${process.env.REACT_APP_METADATA_API_BASE_URL}/api/token/${id}`)
+              .then(res => res.data);
+          }),
+        ).then(tokens => {
+          this.setState({ tokens: tokens, isLoading: false });
+        });
+      });
+  };
+
   componentDidMount() {
-    // this.props.contracts["Token"]
-    //   .queryFilter(this.props.contracts["Token"].filters.Mint(this.props.address))
-    //   .then(tokens => {
-    //     Promise.all(
-    //       tokens.map(token => {
-    //         const id = BigNumber.from(token["data"]).toNumber(token);
-    //         console.log("tokensEventId", id);
-    //         return axios
-    //           .get(`${process.env.REACT_APP_METADATA_API_BASE_URL}/api/token/${id}`)
-    //           .then(res => res.data);
-    //       }),
-    //     ).then(tokens => {
-    //       this.setState({ tokens: tokens, isLoading: false });
-    //     });
-    //   });
+    this.fetchTokens();
   }
 
   render() {
     return (
       <div className="menu-view">
-        {/* <Spin indicator={antIcon} hidden={this.state.isLoading === false} />
+        <Spin indicator={antIcon} hidden={this.state.isLoading === false} />
         {!this.state.isLoading && (
           <div>
             <div>{this.props?.headerText}</div>
@@ -72,7 +78,7 @@ export default class Tokens extends React.Component {
               })}
             </div>
           </div>
-        )} */}
+        )}
       </div>
     );
   }
